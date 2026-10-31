@@ -21,11 +21,25 @@
 | `src/i18n/test-setup.ts` | 测试语言固定为英文（不受本机系统语言影响） |
 | `scripts/verify-locale.mjs` | 浏览器端到端验证（EN→ZH→EN 切换） |
 
-对上游文件的改动只有三处，均为极小 diff，合并冲突概率很低：
+对上游文件的改动只有五处，均为极小 diff，合并冲突概率很低：
 
 1. `src/App.tsx`：import `LocaleToggle` + 右上角渲染一行
 2. `vite.config.ts`：plugins 里加 `agentplayI18n()` 一项（及 test.setupFiles 一行）
 3. `package.json`：devDependencies（`@babel/parser`、`magic-string`）
+4. `src/explorer/SessionList.tsx`、`src/insights/SearchHeatmap.tsx`：
+   各几行——英文复数机制（`plural(n, 'prompt')` 拼单词）无法词典化，
+   改为直接调用 `t('{n} prompts', { n })`，中文没有复数故单复数合并
+
+## 安全性设计（为什么不会破坏功能）
+
+注入器只改写"显示位置"的字符串，以下位置**永不改写**（词典命中也不改）：
+
+- import/export、对象 key、成员访问 `obj['x']`、类型位置、tag 模板
+- `className`/`style`/`rel` 等样式属性，`cn()/cva()` 的参数
+- **值语义位置**：`===` 比较、`includes/has/startsWith…` 参数、
+  `switch case`、**带非 string 类型标注的数组**（枚举列表）——
+  词典词条与代码枚举同形（如 `'blocked'`）也不会改变程序行为
+- 已在 `t()`/`__ap_t()` 调用内的参数（防二次包裹）
 
 ## 同步上游更新后的工作流
 

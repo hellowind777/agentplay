@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
+import { t } from '@/i18n';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SEQUENTIAL } from '@/components/dataviz';
@@ -145,10 +146,10 @@ export function SearchHeatmap({ rows }: { rows: InsightsSession[] }) {
                       <span className="block truncate font-mono text-[11px] font-semibold">{f.name}</span>
                       <span className="block truncate text-[10.5px] opacity-80">
                         {metric === 'sessions'
-                          ? `${f.sessions} ${f.sessions === 1 ? 'session' : 'sessions'}`
+                          ? t('{n} sessions', { n: f.sessions })
                           : f.edits
-                            ? `${(f.hits / f.edits).toFixed(1)} hits per edit`
-                            : 'never edited'}
+                            ? t('{n} hits per edit', { n: (f.hits / f.edits).toFixed(1) })
+                            : t('never edited')}
                       </span>
                     </>
                   ) : null}

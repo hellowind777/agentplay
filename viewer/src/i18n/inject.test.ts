@@ -28,4 +28,22 @@ describe('injectTranslations', () => {
     const out = injectTranslations(src)!;
     expect(out.code).toContain(`__ap_t("Task {a0}", { a0: n })`);
   });
+
+  it('never rewrites enum arrays, comparisons or lookups', () => {
+    const src = [
+      `type Outcome = 'verified' | 'blocked';`,
+      `const ORDER: Outcome[] = ['verified', 'blocked'];`,
+      `const NAMES: string[] = ['Verified', 'Blocked'];`,
+      `const hit = ORDER.includes('blocked');`,
+      `const same = state === 'Blocked';`,
+      `const cap = NAMES[0];`,
+      `export { ORDER, NAMES, hit, same, cap };`,
+    ].join('\n');
+    const out = injectTranslations(src)!;
+    // 'Verified'/'Blocked' translate only in the plain string[] list.
+    expect(out.code).toContain(`const NAMES: string[] = [__ap_t("Verified"), __ap_t("Blocked")]`);
+    expect(out.code).not.toContain(`ORDER = [__ap_t`);
+    expect(out.code).toContain(`ORDER.includes('blocked')`);
+    expect(out.code).toContain(`state === 'Blocked'`);
+  });
 });

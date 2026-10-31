@@ -9,6 +9,7 @@ import type { SessionExplorerSession } from '@/core/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { clockAt, dayLabel, fmtDur, fmtUsd } from '@/core/sessionMapModel';
 import { groupSessionsByDay } from '@/core/sessionLayout';
@@ -313,8 +314,6 @@ function SessionRow({
   );
 }
 
-const plural = (n: number, one: string) => `${n} ${one}${n > 1 ? 's' : ''}`;
-
 function SessionRowBadges({
   s,
   unavailable,
@@ -336,17 +335,17 @@ function SessionRowBadges({
         </Badge>
       ))}
       {prompts > 1 ? (
-        <Badge variant="outline">{plural(prompts, 'prompt')}</Badge>
+        <Badge variant="outline">{t('{n} prompts', { n: prompts })}</Badge>
       ) : null}
       {merged ? <Badge variant="outline">PR merged</Badge> : null}
       {s.subagents ? (
-        <Badge variant="outline">{plural(s.subagents, 'subagent')}</Badge>
+        <Badge variant="outline">{t('{n} subagents', { n: s.subagents })}</Badge>
       ) : null}
       {s.errors ? (
-        <Badge variant="error">{plural(s.errors, 'error')}</Badge>
+        <Badge variant="error">{t('{n} errors', { n: s.errors })}</Badge>
       ) : null}
       {s.compactions ? (
-        <Badge variant="warning">{plural(s.compactions, 'compaction')}</Badge>
+        <Badge variant="warning">{t('{n} compactions', { n: s.compactions })}</Badge>
       ) : null}
       {unavailable ? (
         <Badge variant="secondary">map not available</Badge>

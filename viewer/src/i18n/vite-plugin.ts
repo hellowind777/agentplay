@@ -96,6 +96,73 @@ function isStructural(node: Node, parent: Node | null, parentKey: string | null)
   }
 }
 
+/**
+ * Positions where a string is compared, looked up or enumerated rather than
+ * displayed. Rewriting there would break logic the moment the dictionary
+ * translates it (`OUTCOME_ORDER` holding `t("blocked")` made the Insights
+ * view crash on lookup). Value positions never render directly, so skipping
+ * them only costs a fallback to English.
+ */
+function isValuePosition(node: Node, parent: Node | null, parentKey: string | null): boolean {
+  if (!parent) return false;
+  // `x === 'lit'`, `'lit' in obj`, ordering comparisons…
+  if (parent.type === 'BinaryExpression') return true;
+  // switch (x) { case 'lit': … }
+  if (parent.type === 'SwitchCase' && parentKey === 'test') return true;
+  // xs.includes('lit'), map.has('lit'), s.startsWith('lit') …
+  if (parent.type === 'CallExpression' && parentKey === 'arguments') {
+    const callee = parent.callee as { type: string; property?: { type: string; name?: string; value?: string } } | undefined;
+    if (callee?.type === 'MemberExpression') {
+      const prop = callee.property;
+      const name = prop?.type === 'Identifier' ? prop.name : prop?.type === 'StringLiteral' ? prop.value : undefined;
+      if (name && /^(includes|indexOf|lastIndexOf|startsWith|endsWith|has|hasOwn|findIndex|find|filter|some|every)$/.test(name)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Arrays initialized under a declaration with a non-string type annotation
+ * (`const ORDER: SessionOutcome[] = […]`, `new Set<AgentId>([…])`) — enum
+ * or value lists whose members must keep their exact spelling. The walker
+ * visits a VariableDeclarator before its elements, so this is filled in
+ * time for the element checks.
+ */
+function collectEnumArrays(root: Node): WeakSet<Node> {
+  const out = new WeakSet<Node>();
+  walk(root, null, null, (node) => {
+    if (node.type !== 'VariableDeclarator') return;
+    const ann = (node.id as { typeAnnotation?: { typeAnnotation?: Node } }).typeAnnotation?.typeAnnotation;
+    if (!ann || isPlainStringType(ann)) return;
+    const init = node.init as Node | null | undefined;
+    if (init?.type === 'ArrayExpression') out.add(init);
+    if (init?.type === 'NewExpression' || init?.type === 'CallExpression') {
+      for (const arg of ((init as { arguments?: Node[] }).arguments ?? []) as Node[]) {
+        if (arg.type === 'ArrayExpression') out.add(arg);
+      }
+    }
+  });
+  return out;
+}
+
+/** `string`, `string[]`, `readonly string[]`, `Array<string>` — safe to translate. */
+function isPlainStringType(ann: Node): boolean {
+  if (ann.type === 'TSTypeOperator') return isPlainStringType(ann.typeAnnotation as Node);
+  if (ann.type === 'TSArrayType') return (ann.elementType as Node)?.type === 'TSStringKeyword';
+  if (ann.type === 'TSStringKeyword') return true;
+  if (ann.type === 'TSTypeReference') {
+    const name = (ann.typeName as { name?: string })?.name;
+    if (name === 'string') return true;
+    if (name === 'Array') {
+      const param = (ann.typeParameters as { params?: Node[] })?.params?.[0];
+      return param?.type === 'TSStringKeyword';
+    }
+  }
+  return false;
+}
+
 interface Replacement {
   start: number;
   end: number;
@@ -116,15 +183,25 @@ function dropNestedOuter(replacements: Replacement[]): Replacement[] {
   );
 }
 
+/** True inside a `t(...)` / `__ap_t(...)` call — its argument is already
+ * translated source, hand-patched or from an earlier pass. */
+function isInsideTCall(parent: Node | null, parentKey: string | null): boolean {
+  if (!parent || parent.type !== 'CallExpression' || parentKey !== 'arguments') return false;
+  const callee = parent.callee as { type: string; name?: string } | undefined;
+  return callee?.type === 'Identifier' && (callee.name === 't' || callee.name === '__ap_t');
+}
+
 /** Rewrite `code` per the dictionary; returns null when nothing matched. */
 export function injectTranslations(code: string) {
   const ast = parse(code, {
     sourceType: 'module',
     plugins: ['typescript', 'jsx'],
   });
+  const enumArrays = collectEnumArrays(ast.program as unknown as Node);
   const replacements: Replacement[] = [];
   walk(ast.program, null, null, (node, parent, parentKey) => {
     if (node.start == null || node.end == null) return;
+    if (parent?.type === 'ArrayExpression' && enumArrays.has(parent)) return;
 
     if (node.type === 'JSXText') {
       const trimmed = String(node.value).trim();
@@ -140,7 +217,9 @@ export function injectTranslations(code: string) {
     }
 
     if (isStructural(node, parent, parentKey)) return;
+    if (isInsideTCall(parent, parentKey)) return;
     if (isStylePosition(node, parent, parentKey)) return;
+    if (isValuePosition(node, parent, parentKey)) return;
 
     if (node.type === 'StringLiteral') {
       const value = String(node.value);
@@ -299,10 +378,12 @@ export function extractCandidates(code: string): Candidate[] {
     sourceType: 'module',
     plugins: ['typescript', 'jsx'],
   });
+  const enumArrays = collectEnumArrays(ast.program as unknown as Node);
   const out: Candidate[] = [];
   const lineOf = (offset: number) => code.slice(0, offset).split('\n').length;
   walk(ast.program, null, null, (node, parent, parentKey) => {
     if (node.start == null) return;
+    if (parent?.type === 'ArrayExpression' && enumArrays.has(parent)) return;
     const line = lineOf(node.start);
     if (node.type === 'JSXText') {
       const trimmed = String(node.value).trim();
@@ -310,7 +391,9 @@ export function extractCandidates(code: string): Candidate[] {
       return;
     }
     if (isStructural(node, parent, parentKey)) return;
+    if (isInsideTCall(parent, parentKey)) return;
     if (isStylePosition(node, parent, parentKey)) return;
+    if (isValuePosition(node, parent, parentKey)) return;
     if (node.type === 'StringLiteral') {
       if (looksLikeCopy(String(node.value))) out.push({ key: String(node.value), kind: 'str', line });
       return;

@@ -892,6 +892,14 @@ export const zh: Record<string, string> = {
   'left out.': '未计入。',
   'median tokens at compaction': '压缩时的 token 中位数',
   'never edited': '从未编辑',
+  // ── 地图分组标签 ──
+  subagents: '子 agent',
+  errors: '错误',
+  models: '模型',
+  outputs: '产出',
+  skills: '技能',
+  web: '网页',
+  ' · {n} maps': ' · {n} 个地图',
   'no cost data and': '无成本数据且',
   'no result, failed or killed': '无结果、失败或被终止',
   'of sessions compact': '的会话发生过压缩',
@@ -917,11 +925,17 @@ export const zh: Record<string, string> = {
   'vs previous window': '对比上一个窗口',
   '{a0} Cursor {a1} without cost data left out': '{a0} 个 Cursor {a1}因无成本数据未计入',
   '{a0} failures': '{a0} 次失败',
-  '{a0} hits per edit': '每次编辑 {a0} 次命中',
   '{a0} of {a1} code-changing sessions · {a2} merged':
     '{a0} / {a1} 个改代码的会话 · {a2} 个已合并',
   '{a0}: {a1} sessions, {a2} search hits, {a3} reads, {a4} edits':
     '{a0}：{a1} 个会话，{a2} 次搜索命中，{a3} 次读取，{a4} 次编辑',
+  // ── 复数统计（手写 t() 的源码补丁点，见 i18n/README.md）──
+  '{n} prompts': '{n} 条提示',
+  '{n} subagents': '{n} 个子 agent',
+  '{n} errors': '{n} 个错误',
+  '{n} compactions': '{n} 次压缩',
+  '{n} sessions': '{n} 个会话',
+  '{n} hits per edit': '每次编辑 {n} 次命中',
   // ── insights/AutotuneView ──
   '$ agentplay autotune on            # at session start\n$ agentplay autotune on --at 09:00  # or a set time, via cron\n$ agentplay autotune status':
     '$ agentplay autotune on            # 会话开始时\n$ agentplay autotune on --at 09:00  # 或指定时间，经 cron\n$ agentplay autotune status',

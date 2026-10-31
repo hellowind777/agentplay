@@ -23,7 +23,7 @@ import { AccountChip, useAccount, WelcomeGate } from '@/app/AccountGate';
 import { PlatformBanner } from '@/app/PlatformBanner';
 import { useTheme } from '@/app/theme';
 import { useFileDrop } from '@/app/useFileDrop';
-import { LocaleToggle } from '@/i18n';
+import { LocaleToggle, t } from '@/i18n';
 import {
   SAMPLE_QUERY,
   SampleModeProvider,
@@ -254,7 +254,7 @@ function AppBar({
       {mode !== 'probing' ? (
         <Badge variant="keyline">
           {source.label}
-          {count != null ? ` · ${count} ${count === 1 ? 'map' : 'maps'}` : ''}
+          {count != null ? t(' · {n} maps', { n: count }) : ''}
           {status.data?.scanning ? ' · scanning…' : ''}
         </Badge>
       ) : null}
