@@ -23,6 +23,7 @@ import { AccountChip, useAccount, WelcomeGate } from '@/app/AccountGate';
 import { PlatformBanner } from '@/app/PlatformBanner';
 import { useTheme } from '@/app/theme';
 import { useFileDrop } from '@/app/useFileDrop';
+import { LocaleToggle } from '@/i18n';
 import {
   SAMPLE_QUERY,
   SampleModeProvider,
@@ -278,6 +279,7 @@ function AppBar({
       <div className="ml-auto flex items-center gap-2">
         {account}
         {picker}
+        <LocaleToggle />
         <Button
           variant="ghost"
           size="iconSm"

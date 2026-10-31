@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { agentplayI18n } from './src/i18n/vite-plugin';
 
 // `base: './'` keeps every asset URL relative, so the built `dist/` can be
 // served from any path (the Python CLI mounts it wherever it likes).
@@ -9,7 +10,9 @@ const server = process.env.AGENTPLAY_SERVER;
 
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  // i18n first: inject `t()` calls into dictionary-listed strings before
+  // anything else touches the module. See src/i18n/vite-plugin.ts.
+  plugins: [agentplayI18n(), react()],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
@@ -25,5 +28,8 @@ export default defineConfig({
     env: { TZ: 'America/Los_Angeles' },
     globals: true,
     include: ['src/**/*.test.{ts,tsx}'],
+    // Tests assert English strings; pin the language so an zh-CN OS does not
+    // flip the injected translations under them.
+    setupFiles: ['src/i18n/test-setup.ts'],
   },
 });
